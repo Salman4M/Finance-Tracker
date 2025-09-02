@@ -142,9 +142,21 @@ CELERY_BROKER_URL='redis://localhost:6379/0'
 
 CELERY_RESULT_BACKEND='redis://localhost:6379/0'
 
+
 CELERY_BEAT_SCHEDULE = {
-    'fetch-asset-data-every-5-minutes': {
+    'fetch-crypto-prices-every-5-minutes': {
         'task': 'tracker.tasks.fetch_crypto_price',
-        'schedule': crontab(minute='*/5'), ## in every 5 minutes
+        'schedule': crontab(minute='*/5'),
+    },
+    'check-alerts-every-5-minutes': {
+        'task': 'tracker.tasks.alert_price_drop_or_rise_symbols',
+        'schedule': crontab(minute='*/5'),
     },
 }
+#for real mail
+EMAIL_HOST = 'smtp.gmail.com'
+EMAIL_HOST_USER = 'salmanmemmedli01@gmail.com'
+EMAIL_HOST_PASSWORD = 'hzhvqbmjzxhbkuah'
+EMAIL_PORT= 465
+EMAIL_USE_TLS = False
+EMAIL_USE_SSL = True

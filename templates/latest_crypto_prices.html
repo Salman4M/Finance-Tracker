@@ -1,0 +1,7 @@
+{%for price in latest_prices%}
+  <div>
+    <h2>{{ price.symbol }}</h2>
+    <p>Price: {{ price.price }}</p>
+    <p>Timestamp: {{ price.created_at }}</p>
+  </div>
+{%endfor%}

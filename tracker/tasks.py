@@ -1,5 +1,5 @@
 import requests
-from tracker.models import PriceHistory
+from tracker.models import Asset, PriceHistory,Alert
 from celery import shared_task
 from selenium import webdriver
 from selenium.webdriver.chrome.service import Service
@@ -8,6 +8,10 @@ from selenium.webdriver.support.ui import WebDriverWait
 import time
 from selenium.webdriver.support import expected_conditions as EC
 from bs4 import BeautifulSoup
+from django.core.mail import send_mail
+from django.conf import settings
+from decimal import Decimal
+
 
 # def fetch_asset_data(symbol='bitcoin'):
 #     url = f"https://api.coingecko.com/api/v3/simple/price?ids={symbol}&vs_currencies=usd"
@@ -80,3 +84,42 @@ def fetch_crypto_price():
             print(f"{symbol} saved: {price}")
     except Exception as e:
         print(f"Stock fetch error: {e}")
+
+
+
+def alert_price_drop_or_rise(symbol):
+    latest_price=PriceHistory.objects.filter(symbol=symbol.upper()).order_by('-created_at').first()
+    for alert in Alert.objects.filter(asset__symbol=symbol.upper(), trigger=False):
+        try:
+            amount=Decimal(alert.asset.amount)
+            current_price = Decimal(latest_price.price)
+            price=Decimal(amount*current_price)
+            target_price = Decimal(alert.target_price)
+
+            send = False
+            if alert.condition == 'Above' and price > target_price:
+                send = True
+            elif alert.condition == 'Below' and price < target_price:
+                send = True
+
+            if send:
+                send_mail(
+                    "Update on your Asset",
+                    f"The latest price for {symbol} is {price}.",
+                    settings.DEFAULT_FROM_EMAIL,
+                    [alert.user.email],
+                )
+                alert.trigger = True
+                alert.save(update_fields=["trigger"])
+
+        except Exception as e:
+            print(f"Error processing alert {alert.id} for {symbol}: {e}")
+
+
+@shared_task
+def alert_price_drop_or_rise_symbols():
+    symbols=(
+        Alert.objects.filter(trigger=False).values_list('asset__symbol', flat=True).distinct()
+    )
+    for symbol in symbols:
+        alert_price_drop_or_rise(symbol)

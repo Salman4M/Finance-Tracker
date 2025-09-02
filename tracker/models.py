@@ -26,7 +26,7 @@ class Asset(DateMixin):
     owner=models.ForeignKey('auth.User', on_delete=models.CASCADE)
 
     def __str__(self):
-        return self.name
+        return self.symbol
 
     
 
