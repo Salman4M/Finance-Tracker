@@ -87,39 +87,55 @@ def fetch_crypto_price():
 
 
 
-def alert_price_drop_or_rise(symbol):
-    latest_price=PriceHistory.objects.filter(symbol=symbol.upper()).order_by('-created_at').first()
-    for alert in Alert.objects.filter(asset__symbol=symbol.upper(), trigger=False):
-        try:
-            amount=Decimal(alert.asset.amount)
-            current_price = Decimal(latest_price.price)
-            price=Decimal(amount*current_price)
-            target_price = Decimal(alert.target_price)
 
-            send = False
-            if alert.condition == 'Above' and price > target_price:
-                send = True
-            elif alert.condition == 'Below' and price < target_price:
-                send = True
+def get_latest_prices():
+    results={}
+    url = "https://api.coingecko.com/api/v3/simple/price?ids=bitcoin,ethereum&vs_currencies=usd"
+    data=requests.get(url,timeout=10).json()
+    for symbol in data:
+        results[symbol.upper()]=data[symbol]['usd']
 
-            if send:
-                send_mail(
-                    "Update on your Asset",
-                    f"The latest price for {symbol} is {price}.",
-                    settings.DEFAULT_FROM_EMAIL,
-                    [alert.user.email],
-                )
-                alert.trigger = True
-                alert.save(update_fields=["trigger"])
+    return results
 
-        except Exception as e:
-            print(f"Error processing alert {alert.id} for {symbol}: {e}")
+
+def alert_price_drop_or_rise(results):
+    for symbol,price in results.items():
+        alerts=Alert.objects.filter(asset__symbol=symbol.upper(), trigger=False)
+        for alert in alerts:
+            try:
+                amount=Decimal(alert.asset.amount)
+                current_price = Decimal(price)
+                price=Decimal(amount*current_price)
+                target_price = Decimal(alert.target_price)
+
+                send = False
+                if alert.condition == 'Above' and price > target_price:
+                    send = True
+                elif alert.condition == 'Below' and price < target_price:
+                    send = True
+
+                if send:
+                    send_mail(
+                        "Update on your Asset",
+                        f"The latest price for {symbol} is {price}.",
+                        settings.DEFAULT_FROM_EMAIL,
+                        [alert.user.email],
+                    )
+                    alert.trigger = True
+                    alert.save(update_fields=["trigger"])
+
+            except Exception as e:
+                print(f"Error processing alert {alert.id} for {symbol}: {e}")
 
 
 @shared_task
-def alert_price_drop_or_rise_symbols():
-    symbols=(
-        Alert.objects.filter(trigger=False).values_list('asset__symbol', flat=True).distinct()
-    )
-    for symbol in symbols:
-        alert_price_drop_or_rise(symbol)
+def check_prices():
+    latest_prices = get_latest_prices()
+    alert_price_drop_or_rise(latest_prices)
+
+# def alert_price_drop_or_rise_symbols():
+#     symbols=(
+#         Alert.objects.filter(trigger=False).values_list('asset__symbol', flat=True).distinct()
+#     )
+#     for symbol in symbols:
+#         alert_price_drop_or_rise(symbol)

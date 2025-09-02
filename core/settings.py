@@ -149,7 +149,7 @@ CELERY_BEAT_SCHEDULE = {
         'schedule': crontab(minute='*/5'),
     },
     'check-alerts-every-5-minutes': {
-        'task': 'tracker.tasks.alert_price_drop_or_rise_symbols',
+        'task': 'tracker.tasks.check_prices',
         'schedule': crontab(minute='*/5'),
     },
 }
