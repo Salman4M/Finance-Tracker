@@ -1,0 +1,7 @@
+{{asset.symbol}}
+<p>{{asset.amount}}</p>
+Buy price: {{asset.buy_price}}
+<form method='POST'>
+    {%csrf_token%}
+    <button type='submit' name="{{asset.id}}">Delete</button>
+</form>

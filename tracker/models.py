@@ -55,3 +55,19 @@ class Alert(DateMixin):
     def __str__(self):
         return f"Alert for {self.asset.name} at {self.target_price}"
     
+
+
+#we gon delete the asset after we sell it. we can only see the asset when we had already bought it
+
+class Transaction(DateMixin):
+    user=models.ForeignKey('auth.User', on_delete=models.CASCADE)
+    # asset=models.ForeignKey(Asset, on_delete=models.CASCADE,blank=True,null=True)
+    transaction_type=models.CharField(max_length=10, choices=(('Buy','Buy'),('Sell','Sell')))
+    price_per_unit=models.DecimalField(max_digits=10, decimal_places=2)
+    amount=models.DecimalField(max_digits=10, decimal_places=8)
+    total_price=models.DecimalField(max_digits=10, decimal_places=2)
+
+    def __str__(self):
+        return f"{self.transaction_type} at {self.price_per_unit}"
+    
+

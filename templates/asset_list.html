@@ -1,0 +1,11 @@
+{%for asset in assets%}
+{%for symbol, price in current_prices.items %}
+{%if symbol == asset.symbol%}
+<h1>{{asset.symbol}}</h1>
+<p>Amount: {{asset.amount}}</p>
+<p>Buy Price: {{asset.buy_price}}</p>
+<p>Current Price: {{price}}</p>
+{%endif%}
+
+{%endfor%}
+{%endfor%}

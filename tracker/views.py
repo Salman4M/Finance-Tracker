@@ -51,6 +51,15 @@ def buy_asset_view(request):
 
     return render(request,'buy_asset.html',{'form':form})
 
+def sell_asset_view(request,id):
+    asset=Asset.objects.get(id=id)
+    if asset:
+        if request.method=='POST':
+            asset.delete()
+            return redirect('tracker:latest_crypto_price_list')
+    
+    return render(request,'sell_asset.html',{"asset":asset})
+
 
 def asset_detail_view(request,id):
     asset=Asset.objects.get(id=id)
@@ -68,6 +77,24 @@ def asset_detail_view(request,id):
 
     return render(request,'asset_detail.html',context)
 
+from tracker.tasks import get_latest_prices
+
+
+def asset_list_view(request):
+    current_prices={}
+    assets=Asset.objects.filter(owner=request.user)
+
+    for asset in assets:
+        price=PriceHistory.objects.filter(symbol=asset.symbol.upper()).order_by('-created_at').first()
+        if price:
+            amount=Decimal(asset.amount)
+            price_per_unit=Decimal(price.price)
+            current=Decimal(price_per_unit)*Decimal(amount)
+            current_prices[asset.symbol]=current
+
+
+    context={"assets":assets,"current_prices":current_prices}
+    return render(request,'asset_list.html',context)
 
 def create_alert_for_asset_view(request):
     form=AlertForm()
@@ -83,4 +110,14 @@ def create_alert_for_asset_view(request):
             return redirect('tracker:asset_detail', id=alert.asset.id)
 
     return render(request,'create_alert.html',{'form':form})
+
+
+def sell_asset_view(request, id):
+    asset = Asset.objects.get(id=id)
+    if request.method == 'POST':
+        asset.delete()
+        return redirect('tracker:asset_list')
+
+    return render(request, 'sell_asset.html', {'asset': asset})
+
 
