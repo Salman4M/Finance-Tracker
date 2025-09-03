@@ -1,5 +1,5 @@
-from django.shortcuts import render,redirect
-from tracker.models import PriceHistory,Asset
+from django.shortcuts import render,redirect,HttpResponse
+from tracker.models import PriceHistory,Asset,Transaction,Profile
 # Create your views here.
 from tracker.forms import BuyAssetForm,AlertForm
 from decimal import Decimal
@@ -37,6 +37,7 @@ def buy_asset_view(request):
 
         if form.is_valid():
             asset=form.save(commit=False)
+            our_money=Profile.objects.get(user=request.user)
             asset.owner=request.user
             latest_price=PriceHistory.objects.filter(symbol=asset.symbol.upper()).order_by('-created_at').first()
             if latest_price:
@@ -44,6 +45,10 @@ def buy_asset_view(request):
                 price_per_unit=Decimal(latest_price.price)
 
             price=amount*price_per_unit
+            if our_money.money-price<0:
+                return HttpResponse("You can't afford it brother. make up your balance ")
+            our_money.money=Decimal(our_money.money)-Decimal(price)
+            our_money.save()
             asset.buy_price=price   
             asset.save()
             return redirect('tracker:asset_detail', id=asset.id)
@@ -51,14 +56,24 @@ def buy_asset_view(request):
 
     return render(request,'buy_asset.html',{'form':form})
 
-def sell_asset_view(request,id):
-    asset=Asset.objects.get(id=id)
-    if asset:
-        if request.method=='POST':
-            asset.delete()
-            return redirect('tracker:latest_crypto_price_list')
-    
-    return render(request,'sell_asset.html',{"asset":asset})
+def sell_asset_view(request, id):
+    asset = Asset.objects.get(id=id)
+    latest_price=PriceHistory.objects.filter(symbol=asset.symbol.upper()).order_by('-created_at').first()
+    prof=Profile.objects.get(user=request.user)
+    if latest_price:
+        amount=Decimal(asset.amount)
+        price_per_unit=Decimal(latest_price.price)
+
+    price=amount*price_per_unit
+
+    if request.method == 'POST':
+        prof.money=Decimal(prof.money)+Decimal(price)
+        prof.save()
+        asset.delete()
+        return redirect('tracker:asset_list')
+
+    return render(request, 'sell_asset.html', {'asset': asset})
+
 
 
 def asset_detail_view(request,id):
@@ -77,7 +92,6 @@ def asset_detail_view(request,id):
 
     return render(request,'asset_detail.html',context)
 
-from tracker.tasks import get_latest_prices
 
 
 def asset_list_view(request):
@@ -112,12 +126,15 @@ def create_alert_for_asset_view(request):
     return render(request,'create_alert.html',{'form':form})
 
 
-def sell_asset_view(request, id):
-    asset = Asset.objects.get(id=id)
-    if request.method == 'POST':
-        asset.delete()
-        return redirect('tracker:asset_list')
-
-    return render(request, 'sell_asset.html', {'asset': asset})
 
 
+def transaction_list_view(request):
+    transactions=Transaction.objects.filter(user=request.user)
+
+    return render(request,'trsn_list.html',{"trsn":transactions})
+
+
+
+def profile_view(request):
+    prof=Profile.objects.get(user=request.user)
+    return render(request,'profile.html',{"prof":prof})

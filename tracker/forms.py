@@ -11,6 +11,8 @@ class BuyAssetForm(forms.ModelForm):
         fields = ['symbol', 'amount']
 
 
+
+
 class AlertForm(forms.ModelForm):
     class Meta:
         model=Alert

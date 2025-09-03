@@ -1,5 +1,5 @@
 from django.db import models
-
+from decimal import Decimal
 # Create your models here.
 
 
@@ -70,4 +70,28 @@ class Transaction(DateMixin):
     def __str__(self):
         return f"{self.transaction_type} at {self.price_per_unit}"
     
+
+class Profile(DateMixin):
+    user=models.OneToOneField('auth.User',on_delete=models.CASCADE)
+    money=models.PositiveIntegerField(default=0)
+    name=models.CharField(max_length=300,blank=True,null=True)
+
+    def __str__(self):
+        return self.name
+    
+    # def save(self):
+    #     assets=Asset.objects.all()
+    #     for asset in assets:
+    #         prices=PriceHistory.objects.filter(symbol=asset.symbol.upper()).order_by('-created_at').first()
+    #         if prices:
+    #             amount=Decimal(asset.amount)
+    #             price_per_unit=Decimal(prices.price)
+    #             current=Decimal(price_per_unit)*Decimal(amount)
+    #             self.money+=current
+
+    #     super().save()
+
+
+
+
 
